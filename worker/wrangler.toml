@@ -1,0 +1,10 @@
+name = "mog-scanner"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+# GITHUB_TOKEN хранится секретом в Cloudflare и сюда не попадает.
+[vars]
+GITHUB_OWNER = "egoricon"
+GITHUB_REPO = "mogger-uploads"
+GITHUB_BRANCH = "main"
