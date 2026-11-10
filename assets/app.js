@@ -145,6 +145,51 @@
     return { canvas, dataUrl: canvas.toDataURL('image/jpeg', 0.84), hash: h >>> 0, name: file.name || 'photo.jpg', sent: false };
   }
 
+  // ── детектор лиц (MediaPipe, в браузере). Если не загрузился — фото принимаем без проверки ──
+  const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+  const MP_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
+  let detectorReady = false;
+  let detectorP;
+  function getDetector() {
+    detectorP ||= Promise.race([
+      (async () => {
+        const { FaceDetector, FilesetResolver } = await import(`${MP}/vision_bundle.mjs`);
+        const fileset = await FilesetResolver.forVisionTasks(`${MP}/wasm`);
+        const det = await FaceDetector.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: MP_MODEL },
+          runningMode: 'IMAGE',
+          minDetectionConfidence: 0.5,
+        });
+        detectorReady = true;
+        return det;
+      })(),
+      new Promise((r) => setTimeout(() => r(null), 15000)),
+    ]).catch(() => null);
+    return detectorP;
+  }
+  setTimeout(getDetector, 2500);
+
+  // undefined — детектор недоступен, null — лица нет, объект — рамка лица в долях кадра
+  async function findFace(canvas) {
+    if (!detectorReady) toast('Ищем лицо…');
+    const det = await getDetector();
+    if (!det) return undefined;
+    try {
+      const d = det.detect(canvas).detections[0];
+      const b = d?.boundingBox;
+      if (!b) return null;
+      return { x: b.originX / canvas.width, y: b.originY / canvas.height, w: b.width / canvas.width, h: b.height / canvas.height, score: d.categories?.[0]?.score ?? 0 };
+    } catch {
+      return undefined;
+    }
+  }
+  const NO_FACE = [
+    'Лицо не обнаружено. Мьюинг невозможен.',
+    'Тут нет лица. Аура не прочитана.',
+    'Сканер ищет лицо, но находит только пустоту.',
+    'Лицо не найдено. Нужно фото, где видно лицо анфас или 3/4.',
+  ];
+
   function mulberry32(a) {
     return () => {
       a = (a + 0x6d2b79f5) | 0;
@@ -204,7 +249,7 @@
         <div class="plus" aria-hidden="true">+</div>
       </div>
       <img alt="">
-      <div class="fx"><div class="fx-laser"></div></div>
+      <div class="fx"><div class="fx-laser"></div><div class="fx-face"><i></i></div></div>
       <div class="tag">Моггер</div>
       <div class="stamp">MOGGED</div>`;
     $('b', el).textContent = el.dataset.label;
@@ -220,11 +265,31 @@
       },
       lock(on) { input.disabled = on; el.classList.toggle('locked', on); },
     };
+    // рамка лица поверх фото: учитываем object-fit: cover
+    const faceBox = $('.fx-face', el);
+    function placeFace() {
+      const f = slot.photo?.face;
+      const W = el.clientWidth, H = el.clientHeight, c = slot.photo?.canvas;
+      faceBox.classList.toggle('on', !!(f && W && H));
+      if (!f || !W || !H) return;
+      const k = Math.max(W / c.width, H / c.height);
+      const ox = (W - c.width * k) / 2, oy = (H - c.height * k) / 2;
+      Object.assign(faceBox.style, {
+        left: ox + f.x * c.width * k + 'px', top: oy + f.y * c.height * k + 'px',
+        width: f.w * c.width * k + 'px', height: f.h * c.height * k + 'px',
+      });
+      $('i', faceBox).textContent = `Лицо ${Math.round(f.score * 100)}%`;
+    }
+    new MutationObserver(() => el.classList.contains('scanning') && placeFace()).observe(el, { attributes: true, attributeFilter: ['class'] });
+
     async function take(file) {
       if (!file || busy) return;
       if (!file.type.startsWith('image/')) return toast('Это не картинка. Нужен JPG, PNG или WEBP.');
       try {
         const photo = await loadPhoto(file);
+        const face = await findFace(photo.canvas);
+        if (face === null) return toast(pick(NO_FACE));
+        photo.face = face || null;
         slot.set(photo);
         onPhoto(photo);
       } catch {
@@ -682,5 +747,58 @@
     }
   }
 
-  window.__mog = { drawScanCard, drawBattleCard, PAPER };
+  // ═════════════ ВЫЗОВ ПО ССЫЛКЕ ═════════════
+  $('#challengeBtn').addEventListener('click', async () => {
+    const photo = scanSlot.photo;
+    if (!photo) return;
+    if (!$('#consent').checked) return toast('Отметь согласие: фото увидит тот, у кого есть ссылка.');
+    if (LOCAL) return toast('Локально вызовы не работают: только на самом сайте.');
+    const btn = $('#challengeBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${WORKER_URL}/challenge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: $('#chName').value.trim() || 'Аноним', hash: photo.hash, imageBase64: photo.dataUrl.split(',')[1] }),
+      });
+      if (!res.ok) throw new Error(res.status);
+      const { id } = await res.json();
+      const url = `${location.origin}${location.pathname}#c=${id}`;
+      const text = 'Замоггай меня в Aura Battle';
+      if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+        await navigator.share({ title: 'MOGGER', text, url }).catch(() => {});
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast('Ссылка скопирована. Отправь её другу: она живёт 7 дней.');
+      }
+    } catch {
+      toast('Не получилось создать вызов. Попробуй ещё раз.');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  async function openChallenge(id) {
+    try {
+      const res = await fetch(`${WORKER_URL}/challenge/${id}`);
+      if (res.status === 404) return toast('Вызов устарел: ссылки живут 7 дней.');
+      if (!res.ok) throw new Error(res.status);
+      const rec = await res.json();
+      const bytes = Uint8Array.from(atob(rec.image), (c) => c.charCodeAt(0));
+      const photo = await loadPhoto(new File([bytes], 'challenge.jpg', { type: 'image/jpeg' }));
+      photo.hash = rec.hash; // тот же результат, что был у автора в сканере
+      photo.sent = true;
+      resetBattle();
+      F[0].slot.set(photo);
+      F[0].nameEl.value = rec.name || '';
+      setMode('battle');
+      refreshFight();
+      toast(`${rec.name || 'Кто-то'} вызывает тебя на бой. Загрузи своё фото во второй угол.`);
+    } catch {
+      toast('Не получилось открыть вызов.');
+    }
+  }
+  const ch = location.hash.match(/^#c=([a-z0-9]{10})$/);
+  if (ch && !LOCAL) openChallenge(ch[1]);
+
 })();

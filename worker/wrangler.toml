@@ -8,3 +8,7 @@ workers_dev = true
 GITHUB_OWNER = "egoricon"
 GITHUB_REPO = "mogger-uploads"
 GITHUB_BRANCH = "main"
+
+[[kv_namespaces]]
+binding = "CHALLENGES"
+id = "da97fabfd9834a3fa82eeba7cc87211d"

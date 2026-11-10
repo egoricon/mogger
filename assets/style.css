@@ -124,6 +124,17 @@ h1 em { font-style: normal; color: var(--red); }
 }
 @keyframes laser { to { top: calc(100% - 5px); } }
 @keyframes dots { 50% { opacity: .4; background-size: 9px 9px; } }
+.fx-face { position: absolute; display: none; border: 3px solid var(--red); box-shadow: 0 0 0 2px var(--paper); }
+.slot.scanning .fx-face.on { display: block; animation: facein .45s var(--spring) both; }
+.fx-face i {
+  position: absolute; left: -3px; bottom: 100%; padding: 4px 7px; background: var(--red); color: var(--paper);
+  font: 700 11px/1 var(--body); font-style: normal; letter-spacing: .06em; white-space: nowrap; text-transform: uppercase;
+}
+@keyframes facein { from { transform: scale(1.3); opacity: 0; } }
+.challenge { grid-column: 1 / -1; display: grid; gap: 10px; padding: 14px; border: 3px solid var(--ink); background: var(--paper); }
+.challenge input[type="text"] { font: 600 16px/1 var(--body); padding: 11px 12px; border: 3px solid var(--ink); background: #fff; color: var(--ink); min-width: 0; }
+.consent { display: flex; gap: 10px; align-items: flex-start; font: 400 13px/1.35 var(--body); color: var(--mute); cursor: pointer; }
+.consent input { width: 20px; height: 20px; flex: none; margin: 0; accent-color: var(--red); }
 .slot.snap::after { content: ""; position: absolute; inset: 0; z-index: 6; background: #fff; pointer-events: none; animation: snap .5s ease-out forwards; }
 @keyframes snap { from { opacity: .95; } to { opacity: 0; } }
 

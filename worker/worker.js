@@ -21,7 +21,7 @@ function json(data, status, origin) {
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": origin || ALLOWED_ORIGINS[0],
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
       Vary: "Origin",
     },
@@ -33,6 +33,37 @@ export default {
     const origin = request.headers.get("Origin");
     if (!ALLOWED_ORIGINS.includes(origin)) return json({ error: "Forbidden origin" }, 403);
     if (request.method === "OPTIONS") return json(null, 200, origin);
+
+    // ── вызов на баттл: фото живёт в KV 7 дней и доступно по случайной ссылке ──
+    const { pathname } = new URL(request.url);
+    if (pathname.startsWith("/challenge")) {
+      if (!env.CHALLENGES) return json({ error: "Challenges not configured" }, 500, origin);
+      if (request.method === "GET") {
+        const id = pathname.split("/")[2] || "";
+        if (!/^[a-z0-9]{10}$/.test(id)) return json({ error: "Bad id" }, 400, origin);
+        const data = await env.CHALLENGES.get(id);
+        return data ? json(JSON.parse(data), 200, origin) : json({ error: "Not found" }, 404, origin);
+      }
+      if (request.method === "POST") {
+        try {
+          const { name, hash, imageBase64 } = await request.json();
+          const content = String(imageBase64 || "").replace(/^data:image\/\w+;base64,/, "");
+          if (content.length > MAX_BASE64_LENGTH || !/^[A-Za-z0-9+/]+={0,2}$/.test(content) || !content.startsWith("/9j/")) {
+            return json({ error: "Bad image" }, 400, origin);
+          }
+          if (!Number.isInteger(hash)) return json({ error: "Bad hash" }, 400, origin);
+          const bytes = crypto.getRandomValues(new Uint8Array(10));
+          const id = [...bytes].map((b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
+          const record = { name: String(name || "").slice(0, 14), hash, image: content };
+          await env.CHALLENGES.put(id, JSON.stringify(record), { expirationTtl: 7 * 24 * 3600 });
+          return json({ ok: true, id }, 201, origin);
+        } catch (error) {
+          return json({ error: "Internal Worker Error" }, 500, origin);
+        }
+      }
+      return json({ error: "Method Not Allowed" }, 405, origin);
+    }
+
     if (request.method !== "POST") return json({ error: "Method Not Allowed. Use POST." }, 405, origin);
 
     try {

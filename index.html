@@ -10,6 +10,12 @@
   <meta property="og:title" content="MOGGER — сканер ауры и Aura Battle">
   <meta property="og:description" content="Загрузи фото и узнай свой тир. Или закинь два — и узнай, кто кого замоггал.">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://egoricon.github.io/mogger/">
+  <meta property="og:image" content="https://egoricon.github.io/mogger/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://egoricon.github.io/mogger/assets/og.png">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23c8171f'/%3E%3Cpath d='M10 50V14h10l12 18 12-18h10v36H44V30L32 47 20 30v20z' fill='%23efe6d2'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -73,6 +79,11 @@
         </div>
         <div class="actions">
           <button class="btn wide" id="toBattleBtn" type="button">В баттл с этим фото</button>
+          <div class="challenge">
+            <input id="chName" type="text" maxlength="14" placeholder="Твоё имя для вызова" aria-label="Твоё имя для вызова">
+            <label class="consent"><input type="checkbox" id="consent"><span>Согласен: фото 7 дней будет доступно всем, у кого есть ссылка.</span></label>
+            <button class="btn red wide" id="challengeBtn" type="button">Вызвать друга по ссылке</button>
+          </div>
           <button class="btn ghost" id="shareScanBtn" type="button">Карточка</button>
           <button class="btn ghost" id="rescanBtn" type="button">Ещё фото</button>
         </div>
