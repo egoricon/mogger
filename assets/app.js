@@ -70,8 +70,9 @@
   };
   const soundBtn = $('#soundBtn');
   function paintSound() {
-    soundBtn.textContent = muted ? 'Звук: выкл' : 'Звук: вкл';
+    soundBtn.classList.toggle('off', muted);
     soundBtn.setAttribute('aria-pressed', String(!muted));
+    soundBtn.setAttribute('aria-label', muted ? 'Звук выключен' : 'Звук включён');
   }
   soundBtn.addEventListener('click', () => {
     muted = !muted;
@@ -161,9 +162,27 @@
   }
 
   function tierColor(idx) {
-    return idx >= 80 ? 'var(--lime)' : idx >= 50 ? 'var(--ice)' : idx >= 25 ? 'var(--amber)' : 'var(--red)';
+    return idx >= 50 ? 'var(--red)' : 'var(--ink)';
   }
-  const HEX = { 'var(--lime)': '#c8ff2e', 'var(--ice)': '#5ee6ff', 'var(--amber)': '#ffb020', 'var(--red)': '#ff2440' };
+  const PAPER = '#efe6d2', INK = '#17130f', RED = '#c8171f', RED_D = '#a8111a', MUTE = '#5c5446', GREY = '#6b6355';
+  const HEX = { 'var(--red)': RED, 'var(--ink)': INK };
+
+  function confetti() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const box = $('#confetti');
+    const bits = Array.from({ length: 36 }, (_, i) => {
+      const b = document.createElement('i');
+      b.style.left = Math.random() * 100 + '%';
+      b.style.background = [RED, INK, '#fff'][i % 3];
+      b.style.setProperty('--x', (Math.random() - 0.5) * 240 + 'px');
+      b.style.setProperty('--r', (Math.random() - 0.5) * 1400 + 'deg');
+      b.style.setProperty('--d', 1.4 + Math.random() * 1.4 + 's');
+      b.style.animationDelay = Math.random() * 0.35 + 's';
+      return b;
+    });
+    box.replaceChildren(...bits);
+    setTimeout(() => box.replaceChildren(), 3400);
+  }
 
   function upload(photo, tag) {
     if (LOCAL || photo.sent) return;
@@ -180,12 +199,12 @@
     el.innerHTML = `
       <input type="file" accept="image/*" hidden>
       <div class="slot-empty">
-        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 16V6h10M32 6h10v10M42 32v10H32M16 42H6V32"/><circle cx="24" cy="21" r="6"/><path d="M13 37c2-6 6-8 11-8s9 2 11 8"/></svg>
-        <b></b><i></i>
+        <svg class="bust" viewBox="0 0 100 125" aria-hidden="true"><circle cx="50" cy="48" r="21"/><path d="M12 125c2-27 17-39 38-39s36 12 38 39z"/></svg>
+        <div class="plate"><b></b><i></i></div>
+        <div class="plus" aria-hidden="true">+</div>
       </div>
       <img alt="">
-      <div class="fx"><div class="fx-grid"></div><div class="fx-laser"></div></div>
-      <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+      <div class="fx"><div class="fx-laser"></div></div>
       <div class="tag">Моггер</div>
       <div class="stamp">MOGGED</div>`;
     $('b', el).textContent = el.dataset.label;
@@ -243,6 +262,7 @@
     scanResult.hidden = true;
     scanHud.hidden = false;
     scanSlot.el.classList.add('scanning');
+    replay(scanSlot.el, 'snap');
     upload(photo, 'scan');
     sfx.slam();
 
@@ -275,8 +295,10 @@
     const bars = $('#resBars');
     bars.replaceChildren(...CRIT.map((c, i) => {
       const row = document.createElement('div');
-      row.innerHTML = `<div class="bar-top"><span></span><b></b></div><div class="bar-track"><i></i></div>`;
-      $('span', row).textContent = `${c.k} · ${c.n}`;
+      row.innerHTML = `<span></span><div class="bar-track"><i></i></div><b></b>`;
+      row.style.setProperty('--i', i);
+      row.title = c.n;
+      $('span', row).textContent = c.k;
       $('b', row).textContent = stats[i];
       return row;
     }));
@@ -284,9 +306,10 @@
     scanResult.hidden = false;
     replay(scanResult, 'result');
     setTimeout(() => $$('.bar-track i', bars).forEach((b, i) => {
-      b.style.transitionDelay = i * 70 + 'ms';
+      b.style.transitionDelay = i * 70 + 350 + 'ms';
       b.style.width = stats[i] + '%';
     }), 60);
+    if (tier.idx >= 80) confetti();
     tier.idx >= 50 ? sfx.win() : sfx.slam();
     count($('#resIdx'), tier.idx, 900, tier.idx % 1 ? (String(tier.idx).split('.')[1] || '').length : 0);
     scanResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -418,10 +441,10 @@
       const row = document.createElement('div');
       row.className = 'log-row';
       row.innerHTML = '<span></span><span></span><span></span>';
-      row.children[0].textContent = c.k;
-      row.children[1].textContent = v[0];
+      row.children[0].textContent = v[0];
+      row.children[1].textContent = c.k;
       row.children[2].textContent = v[1];
-      row.children[w + 1].className = 'w' + w;
+      row.children[w * 2].className = 'w';
       $('#logRows').append(row);
       logBox.hidden = false;
 
@@ -451,8 +474,7 @@
 
     F.forEach((f, i) => {
       const t = P[i].tier;
-      f.tierEl.innerHTML = '<span class="badge"></span><b></b><i></i>';
-      f.tierEl.style.setProperty('--c', i === W ? 'var(--lime)' : 'var(--red)');
+      f.tierEl.innerHTML = '<span></span><b></b><i></i>';
       f.tierEl.children[0].textContent = t.badge;
       f.tierEl.children[1].textContent = t.title;
       f.tierEl.children[2].textContent = t.aura;
@@ -460,8 +482,11 @@
     });
 
     const w = names[W], l = names[L];
+    const side = (i) => Object.assign(document.createElement('span'), { textContent: wins[i], className: i === W ? 'w' : 'l' });
+    $('#fScore').replaceChildren(side(0), ':', side(1));
     const head = $('#fHead');
-    head.replaceChildren(`${w} `, Object.assign(document.createElement('mark'), { textContent: 'моггает' }), ` ${l} — ${wins[W]}:${wins[L]}`);
+    head.replaceChildren(`${w} `, Object.assign(document.createElement('mark'), { textContent: 'моггает' }), ` ${l}`);
+    confetti();
     $('#fRoast').textContent = wins[L] === 0 ? `Семь из семи. ${l} теперь официально фон для ${w} на общих фото.`
       : wins[W] - wins[L] === 1 ? `Разница в один раунд. ${l} требует реванш, другое освещение и зум 2x.`
         : pick([
@@ -510,117 +535,136 @@
     return y + Math.min(lines.length, maxLines) * lh;
   }
 
+  const D = '"Sofia Sans Extra Condensed", "Arial Narrow", sans-serif';
+
+  function frame(x, src, dx, dy, dw, dh, gray) {
+    x.save();
+    if (gray) x.filter = 'grayscale(1) contrast(1.1)';
+    cover(x, src, dx, dy, dw, dh);
+    x.restore();
+    if (gray) { x.fillStyle = 'rgba(239,230,210,.28)'; x.fillRect(dx, dy, dw, dh); }
+    x.lineWidth = 6;
+    x.strokeStyle = INK;
+    x.strokeRect(dx, dy, dw, dh);
+  }
+
+  function label(x, text, dx, dy) {
+    x.font = `900 44px ${D}`;
+    x.textAlign = 'left';
+    const w = x.measureText(text).width + 36;
+    x.fillStyle = INK;
+    x.fillRect(dx, dy, w, 62);
+    x.fillStyle = PAPER;
+    x.fillText(text, dx + 18, dy + 46);
+  }
+
   function drawScanCard(x) {
     const { tier } = scanProfile;
     const c = HEX[tierColor(tier.idx)];
-    cover(x, scanSlot.photo.canvas, 0, 0, CW, 780);
-    const g = x.createLinearGradient(0, 480, 0, 780);
-    g.addColorStop(0, 'rgba(10,10,11,0)');
-    g.addColorStop(1, '#0a0a0b');
-    x.fillStyle = g;
-    x.fillRect(0, 480, CW, 300);
+    frame(x, scanSlot.photo.canvas, 60, 100, CW - 120, 590);
+    label(x, 'СКАН', 60, 100);
 
-    x.textBaseline = 'alphabetic';
-    x.font = '700 30px "JetBrains Mono"';
-    const bw = Math.min(x.measureText(tier.badge.toUpperCase()).width, CW - 160) + 36;
-    x.fillStyle = c;
-    x.fillRect(60, 770, bw, 58);
-    x.fillStyle = '#0a0a0b';
-    x.fillText(tier.badge.toUpperCase(), 78, 810, CW - 160);
+    x.fillStyle = RED_D;
+    x.font = `700 46px ${D}`;
+    x.fillText(tier.badge.toUpperCase(), 60, 762, CW - 120);
+    x.fillStyle = INK;
+    x.font = `900 100px ${D}`;
+    wrap(x, tier.title.toUpperCase(), 60, 858, CW - 120, 86);
 
-    x.fillStyle = '#f3f2ec';
-    x.font = '900 52px Unbounded';
-    const y = wrap(x, tier.title, 60, 912, CW - 120, 64);
-
+    x.fillRect(60, 1066, CW - 120, 6);
     x.fillStyle = c;
-    x.font = '900 150px Unbounded';
-    x.fillText(String(tier.idx), 60, y + 130, CW - 320);
-    const iw = Math.min(x.measureText(String(tier.idx)).width, CW - 320);
-    x.fillStyle = '#908f99';
-    x.font = '500 34px "JetBrains Mono"';
-    x.fillText('/ 100', 60 + iw + 22, y + 130);
-    x.fillStyle = c;
-    x.font = '700 34px "JetBrains Mono"';
-    x.fillText(tier.aura, 60, y + 190, CW - 120);
+    x.font = `900 250px ${D}`;
+    const idx = String(tier.idx);
+    x.fillText(idx, 54, 1272);
+    const iw = x.measureText(idx).width;
+    x.font = `700 46px ${D}`;
+    x.fillStyle = MUTE;
+    x.fillText('ИНДЕКС ИЗ 100', 80 + iw, 1200);
+    x.fillStyle = INK;
+    x.fillText(tier.aura, 80 + iw, 1262, CW - 140 - iw);
   }
 
   function drawBattleCard(x) {
     const { photos, names, wins, W, L } = battle;
-    const pw = 480, ph = 600, py = 170, px = [50, 550];
-    x.textAlign = 'center';
-    x.fillStyle = '#f3f2ec';
-    x.font = '900 60px Unbounded';
-    x.fillText('AURA BATTLE', CW / 2, 110);
-
-    photos.forEach((p, i) => {
-      x.save();
-      if (i === L) x.filter = 'grayscale(1)';
-      cover(x, p.canvas, px[i], py, pw, ph);
-      x.restore();
-      if (i === L) {
-        x.fillStyle = 'rgba(10,10,11,.5)';
-        x.fillRect(px[i], py, pw, ph);
-        x.fillStyle = 'rgba(255,36,64,.22)';
-        x.fillRect(px[i], py, pw, ph);
-      }
-      x.lineWidth = 6;
-      x.strokeStyle = i === W ? '#c8ff2e' : '#ff2440';
-      x.strokeRect(px[i], py, pw, ph);
-      x.fillStyle = i === W ? '#c8ff2e' : '#908f99';
-      x.font = '500 36px Unbounded';
-      x.fillText(names[i].toUpperCase(), px[i] + pw / 2, py + ph + 62, pw);
-    });
+    const pw = 472, ph = 560, py = 100, px = [60, 548];
+    photos.forEach((p, i) => frame(x, p.canvas, px[i], py, pw, ph, i === L));
+    label(x, 'МОГГЕР', px[W], py);
 
     // штамп на проигравшем
     x.save();
     x.translate(px[L] + pw / 2, py + ph / 2);
-    x.rotate(-0.24);
-    x.font = '900 84px Unbounded';
-    const sw = x.measureText('MOGGED').width + 56;
-    x.fillStyle = 'rgba(10,10,11,.45)';
-    x.fillRect(-sw / 2, -70, sw, 136);
-    x.strokeStyle = '#ff2440';
-    x.lineWidth = 9;
-    x.strokeRect(-sw / 2, -70, sw, 136);
-    x.fillStyle = '#ff2440';
-    x.fillText('MOGGED', 0, 30);
+    x.rotate(-0.23);
+    x.font = `900 170px ${D}`;
+    x.textAlign = 'center';
+    const sw = x.measureText('MOGGED').width + 60;
+    x.fillStyle = PAPER;
+    x.fillRect(-sw / 2, -92, sw, 168);
+    x.strokeStyle = RED;
+    x.lineWidth = 12;
+    x.strokeRect(-sw / 2, -92, sw, 168);
+    x.fillStyle = RED;
+    x.fillText('MOGGED', 0, 52);
     x.restore();
 
-    // плашка победителя
-    x.font = '900 30px Unbounded';
-    const tw = x.measureText('МОГГЕР').width + 40;
-    x.fillStyle = '#c8ff2e';
-    x.fillRect(px[W] + pw / 2 - tw / 2, py - 2, tw, 54);
-    x.fillStyle = '#0a0a0b';
-    x.fillText('МОГГЕР', px[W] + pw / 2, py + 37);
+    // VS
+    x.fillStyle = PAPER;
+    x.beginPath(); x.arc(CW / 2, py + ph / 2, 66, 0, 7); x.fill();
+    x.fillStyle = INK;
+    x.beginPath(); x.arc(CW / 2, py + ph / 2, 56, 0, 7); x.fill();
+    x.fillStyle = PAPER;
+    x.textAlign = 'center';
+    x.font = `900 60px ${D}`;
+    x.fillText('VS', CW / 2, py + ph / 2 + 21);
 
-    x.fillStyle = '#f3f2ec';
-    x.font = '900 170px Unbounded';
-    x.fillText(`${wins[0]} : ${wins[1]}`, CW / 2, 1040);
-    x.font = '900 46px Unbounded';
-    wrap(x, `${names[W]} моггает ${names[L]}`.toUpperCase(), CW / 2, 1140, CW - 120, 58, 2);
+    // имена
+    x.font = `900 92px ${D}`;
+    names.forEach((n, i) => {
+      x.textAlign = i ? 'right' : 'left';
+      x.fillStyle = i === W ? INK : GREY;
+      x.fillText(n.toUpperCase(), i ? CW - 60 : 60, 750, 440);
+    });
+
+    // счёт
+    x.font = `900 360px ${D}`;
+    x.textAlign = 'left';
+    const parts = [String(wins[0]), ':', String(wins[1])];
+    const widths = parts.map((p) => x.measureText(p).width);
+    let cx = (CW - widths.reduce((a, b) => a + b, 0)) / 2;
+    parts.forEach((p, i) => {
+      x.fillStyle = i === 1 ? INK : (i === 0 ? 0 : 1) === W ? RED : GREY;
+      x.fillText(p, cx, 1060);
+      cx += widths[i];
+    });
+
+    x.fillStyle = INK;
+    x.fillRect(60, 1100, CW - 120, 6);
+    x.textAlign = 'center';
+    x.font = `900 84px ${D}`;
+    wrap(x, `${names[W]} моггает ${names[L]}`.toUpperCase(), CW / 2, 1196, CW - 120, 78, 2);
     x.textAlign = 'left';
   }
 
   async function shareCard(draw) {
     try {
-      await Promise.all(['900 50px Unbounded', '500 50px Unbounded', '700 30px "JetBrains Mono"', '500 30px "JetBrains Mono"']
-        .map((f) => document.fonts.load(f, 'Aя'))).catch(() => {});
+      await Promise.all(['900', '700'].map((w) => document.fonts.load(`${w} 50px "Sofia Sans Extra Condensed"`, 'Aя'))).catch(() => {});
       const canvas = document.createElement('canvas');
       canvas.width = CW;
       canvas.height = CH;
       const x = canvas.getContext('2d');
-      x.fillStyle = '#0a0a0b';
+      x.fillStyle = PAPER;
       x.fillRect(0, 0, CW, CH);
-      draw(x);
-      x.textAlign = 'left';
-      x.fillStyle = '#908f99';
-      x.font = '500 26px "JetBrains Mono"';
-      x.fillText(SITE, 60, CH - 44);
+      x.textBaseline = 'alphabetic';
+      x.fillStyle = INK;
+      x.font = `900 54px ${D}`;
+      x.fillText('MOGGER', 60, 66);
       x.textAlign = 'right';
-      x.fillStyle = '#c8ff2e';
-      x.font = '900 28px Unbounded';
-      x.fillText('MOGGER', CW - 60, CH - 44);
+      x.fillStyle = MUTE;
+      x.font = `700 34px ${D}`;
+      x.fillText(SITE.toUpperCase(), CW - 60, 64);
+      x.textAlign = 'left';
+      x.fillStyle = INK;
+      x.fillRect(60, 80, CW - 120, 6);
+      draw(x);
 
       const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
       const file = new File([blob], 'mogger.png', { type: 'image/png' });
@@ -638,4 +682,5 @@
     }
   }
 
+  window.__mog = { drawScanCard, drawBattleCard, PAPER };
 })();

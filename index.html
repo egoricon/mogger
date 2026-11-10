@@ -6,37 +6,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>MOGGER — сканер ауры и Aura Battle</title>
   <meta name="description" content="Шуточный биометрический сканер: челюсть, наклон канта, мьюинг и аура. 100 тиров и Aura Battle — узнай, кто кого замоггал.">
-  <meta name="theme-color" content="#0a0a0b">
+  <meta name="theme-color" content="#efe6d2">
   <meta property="og:title" content="MOGGER — сканер ауры и Aura Battle">
   <meta property="og:description" content="Загрузи фото и узнай свой тир. Или закинь два — и узнай, кто кого замоггал.">
   <meta property="og:type" content="website">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230a0a0b'/%3E%3Cpath d='M10 50V14h10l12 18 12-18h10v36H44V30L32 47 20 30v20z' fill='%23c8ff2e'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23c8171f'/%3E%3Cpath d='M10 50V14h10l12 18 12-18h10v36H44V30L32 47 20 30v20z' fill='%23efe6d2'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Onest:wght@400;600&family=Unbounded:wght@500;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;600&family=Sofia+Sans+Extra+Condensed:wght@700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/style.css">
 </head>
 
 <body data-mode="scan">
   <div class="flash" id="flash"></div>
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
 
   <header class="top">
-    <div class="logo">MOG<span>GER</span></div>
-    <button class="sound" id="soundBtn" type="button" aria-pressed="true">Звук: вкл</button>
+    <div class="logo">MOGGER</div>
+    <nav class="modes" aria-label="Режим">
+      <button type="button" data-mode="scan" class="on">Скан</button>
+      <button type="button" data-mode="battle">Баттл</button>
+    </nav>
+    <button class="sound" id="soundBtn" type="button" aria-label="Звук" aria-pressed="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+    </button>
   </header>
 
-  <nav class="modes" aria-label="Режим">
-    <button type="button" data-mode="scan" class="on">Скан</button>
-    <button type="button" data-mode="battle">Aura Battle</button>
-  </nav>
+  <div class="ticker" aria-hidden="true">
+    <div>
+      <span class="t-scan">Челюсть · Кант · Мьюинг · Аура · 100 тиров · От терачада до скуфа ·</span><span class="t-scan">Челюсть · Кант · Мьюинг · Аура · 100 тиров · От терачада до скуфа ·</span><span class="t-scan">Челюсть · Кант · Мьюинг · Аура · 100 тиров · От терачада до скуфа ·</span><span class="t-scan">Челюсть · Кант · Мьюинг · Аура · 100 тиров · От терачада до скуфа ·</span>
+      <span class="t-battle">Главный бой вечера · Aura Battle · Семь раундов · Один моггер ·</span><span class="t-battle">Главный бой вечера · Aura Battle · Семь раундов · Один моггер ·</span><span class="t-battle">Главный бой вечера · Aura Battle · Семь раундов · Один моггер ·</span><span class="t-battle">Главный бой вечера · Aura Battle · Семь раундов · Один моггер ·</span>
+    </div>
+  </div>
 
   <main>
     <!-- ───────────── СКАНЕР ───────────── -->
     <section class="view" id="scanView">
       <div class="intro">
-        <p class="kicker">челюсть · кант · мьюинг · аура</p>
+        <p class="kicker">Биометрический скан</p>
         <h1>Узнай свой <em>тир</em></h1>
-        <p class="lead">Загрузи фото — сканер замерит всё, что можно замерить, и выдаст один из 100 тиров. От терачада до скуфа.</p>
+        <p class="lead">Загрузи фото — сканер замерит всё, что можно замерить, и выдаст один из 100 тиров.</p>
       </div>
 
       <label class="slot" id="scanSlot" data-label="Загрузить фото" data-hint="Анфас или 3/4 · JPG, PNG, WEBP"></label>
@@ -47,12 +56,12 @@
       </div>
 
       <article class="result" id="scanResult" hidden>
-        <div class="res-head">
-          <span class="badge" id="resBadge"></span>
-          <div class="idx"><b id="resIdx">0</b><span>/ 100</span></div>
-        </div>
+        <p class="badge" id="resBadge"></p>
         <h2 id="resTitle"></h2>
-        <p class="aura" id="resAura"></p>
+        <div class="idx-row">
+          <b id="resIdx">0</b>
+          <div class="idx-side"><span>индекс из 100</span><div id="resAura"></div></div>
+        </div>
         <div class="bars" id="resBars"></div>
         <div class="block">
           <h3>Вердикт</h3>
@@ -63,9 +72,9 @@
           <ul id="resTips"></ul>
         </div>
         <div class="actions">
-          <button class="btn" id="toBattleBtn" type="button">В баттл с этим фото</button>
-          <button class="btn ghost" id="shareScanBtn" type="button">Скачать карточку</button>
-          <button class="btn ghost" id="rescanBtn" type="button">Другое фото</button>
+          <button class="btn wide" id="toBattleBtn" type="button">В баттл с этим фото</button>
+          <button class="btn ghost" id="shareScanBtn" type="button">Карточка</button>
+          <button class="btn ghost" id="rescanBtn" type="button">Ещё фото</button>
         </div>
       </article>
     </section>
@@ -73,7 +82,7 @@
     <!-- ───────────── AURA BATTLE ───────────── -->
     <section class="view" id="battleView" hidden>
       <div class="intro">
-        <p class="kicker">два фото · семь раундов · один моггер</p>
+        <p class="kicker">Главный бой</p>
         <h1>Aura <em>Battle</em></h1>
         <p class="lead">Закинь два фото. Сканер по очереди разберёт обоих по семи критериям — проигравший получает штамп.</p>
       </div>
@@ -81,14 +90,14 @@
       <div class="arena" id="arena">
         <div class="fighter" data-side="0">
           <label class="slot" data-label="Боец 1" data-hint="Загрузить фото"></label>
-          <input class="fname" type="text" maxlength="14" placeholder="Имя бойца 1" aria-label="Имя бойца 1">
+          <input class="fname" type="text" maxlength="14" placeholder="Имя 1" aria-label="Имя бойца 1">
           <div class="fval" aria-live="off">—</div>
           <div class="ftier" hidden></div>
         </div>
         <div class="vs" aria-hidden="true">VS</div>
         <div class="fighter" data-side="1">
           <label class="slot" data-label="Боец 2" data-hint="Загрузить фото"></label>
-          <input class="fname" type="text" maxlength="14" placeholder="Имя бойца 2" aria-label="Имя бойца 2">
+          <input class="fname" type="text" maxlength="14" placeholder="Имя 2" aria-label="Имя бойца 2">
           <div class="fval" aria-live="off">—</div>
           <div class="ftier" hidden></div>
         </div>
@@ -104,23 +113,23 @@
         <div class="round-sub" id="rSub" aria-live="polite"></div>
       </div>
 
-      <div class="actions center">
-        <button class="btn red" id="fightBtn" type="button" disabled>Начать баттл</button>
-        <button class="btn ghost" id="skipBtn" type="button" hidden>Пропустить анимацию</button>
+      <div class="actions">
+        <button class="btn red wide" id="fightBtn" type="button" disabled>Начать баттл</button>
+        <button class="btn ghost wide" id="skipBtn" type="button" hidden>Пропустить</button>
       </div>
 
       <div class="final" id="final" hidden>
-        <p class="kicker">финальный вердикт</p>
+        <div class="bigscore" id="fScore"></div>
         <h2 id="fHead"></h2>
         <p id="fRoast"></p>
-        <div class="actions center">
-          <button class="btn red" id="rematchBtn" type="button">Новый баттл</button>
-          <button class="btn ghost" id="shareBattleBtn" type="button">Скачать карточку</button>
+        <div class="actions">
+          <button class="btn red" id="rematchBtn" type="button">Реванш</button>
+          <button class="btn ghost" id="shareBattleBtn" type="button">Карточка</button>
         </div>
       </div>
 
       <div class="log" id="log" hidden>
-        <div class="log-head"><span>Критерий</span><span id="logN0">Боец 1</span><span id="logN1">Боец 2</span></div>
+        <div class="log-head"><span id="logN0">Боец 1</span><span>Тейп</span><span id="logN1">Боец 2</span></div>
         <div id="logRows"></div>
       </div>
     </section>
